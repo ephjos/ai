@@ -8,7 +8,7 @@ class Event():
     Left    = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_LEFT)
     Right   = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RIGHT)
 
-class Model():
+class Agent():
     def __init__(self):
         #TODO: init table
         pass
@@ -21,6 +21,6 @@ class Model():
         self.game.play()
 
 if __name__ == "__main__":
-    model = Model()
-    model.play()
+    agent = Agent()
+    agent.play()
 
