@@ -37,17 +37,19 @@ class GameState(enum.Enum):
     Loss     = enum.auto()
     Quit     = enum.auto()
 
-class SnakeGame:
+class SnakeGame():
     def __init__(self,
-                 width=1000, height=500, fps=10,
-                 board_size=19, tile_size=None):
+                 width=1000, height=500, fps=10, timestep=100,
+                 board_size=15, tile_size=None, get_events=pygame.event.get):
         self.width = width
         self.height = height
         self.fps = fps
         self.board_size = board_size
-        self.tile_size = tile_size if tile_size else height//board_size
+        self.tile_size = tile_size if tile_size else height // board_size
         self.offset = (height - (self.tile_size*board_size)) // 2
         self.gap = 1
+        self.get_events = get_events
+        self.timestep = timestep
 
     def draw_tiles(self, surface, tiles):
         """Draw the board using appropriate tile size and gaps"""
@@ -55,7 +57,7 @@ class SnakeGame:
             pygame.draw.rect(
                 surface, v.to_color(),
                 pygame.Rect(
-                    i*self.tile_size, (j*self.tile_size)+self.offset,
+                    (i*self.tile_size)+self.offset, (j*self.tile_size)+self.offset,
                     self.tile_size-self.gap, self.tile_size-self.gap))
 
     def rand_point(self, tiles):
@@ -75,49 +77,100 @@ class SnakeGame:
         surface = pygame.Surface((self.width, self.height))
 
         # Init game objects
-        tiles = {(i,j): Tile.Empty
+        self.tiles = {(i,j): Tile.Empty
                  for i in range(self.board_size)
                  for j in range(self.board_size)}
         y,x = int(self.board_size*0.25), self.board_size//2 # starting positions
 
         # Set initial food (fixed)
         food = (int(self.board_size*0.75), x)
-        tiles[food] = Tile.Food
+        self.tiles[food] = Tile.Food
 
         snake_queue = Queue()
-        head = (y,x) # follow head (know when to move next)
+        self.head = (y,x) # follow self.head (know when to move next)
         direction = Direction.Right # start moving to the right
         for part in [(y-2,x),(y-1,x),(y,x)]: # initialize snake
             snake_queue.put(part)
-            tiles[part] = Tile.Snake
+            self.tiles[part] = Tile.Snake
 
         game_state = GameState.Running
-        got_food = False
-        last_tick = pygame.time.get_ticks()
+        self.got_food = False
+        self.score = 0
+        max_score = (self.board_size**2)-3
+        self.time = 0
+
+        # Initial render
+        surface.fill(Color.Black) # clear screen
+
+        # draw current state
+        self.draw_tiles(surface, self.tiles)
+        screen.blit(surface, (0,0))
+        pygame.display.flip()
+
+        # enforce fps and screen update
+        clock.tick(self.fps)
+        pygame.display.update()
 
         while game_state == GameState.Running:
             # handle events
-            for event in pygame.event.get():
+            for event in self.get_events():
                 if event.type == pygame.QUIT:
-                    game_over = GameState.Quit
+                    game_state = GameState.Quit
+                    break
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_UP and \
                             direction != Direction.Down:
                         direction = Direction.Up
-                    if event.key == pygame.K_DOWN and \
-                        direction != Direction.Up:
+                        break
+                    elif event.key == pygame.K_DOWN and \
+                            direction != Direction.Up:
                         direction = Direction.Down
-                    if event.key == pygame.K_LEFT and \
+                        break
+                    elif event.key == pygame.K_LEFT and \
                             direction != Direction.Right:
                         direction = Direction.Left
-                    if event.key == pygame.K_RIGHT and \
+                        break
+                    elif event.key == pygame.K_RIGHT and \
                             direction != Direction.Left:
                         direction = Direction.Right
+                        break
 
+            # game state updates
+            next_head = (self.head[0]+direction[0],self.head[1]+direction[1])
+
+            # Enforce board boundaries
+            if not 0 <= next_head[0] < self.board_size or \
+               not 0 <= next_head[1] < self.board_size:
+                game_over = GameState.Loss
+                break
+
+            # Detect tail collision
+            if self.tiles[next_head] == Tile.Snake:
+                game_over = GameState.Loss
+                break
+
+            # Detect picking up food
+            self.got_food = False
+            if self.tiles[next_head] == Tile.Food:
+                self.score += 1
+                if self.score == max_score:
+                    game_over = GameState.Win
+                    break
+                self.got_food = True # skip popping from tail, results in "growing"
+                self.tiles[self.rand_point(self.tiles)] = Tile.Food
+
+            # Add new self.head tile
+            snake_queue.put(next_head)
+            self.tiles[next_head] = Tile.Snake
+            self.head = next_head
+            if not self.got_food: # grow when food eaten, otherwise pop tail
+                self.tiles[snake_queue.get_nowait()] = Tile.Empty
+
+            # Update screen
             surface.fill(Color.Black) # clear screen
 
             # draw current state
-            self.draw_tiles(surface, tiles)
+            self.draw_tiles(surface, self.tiles)
             screen.blit(surface, (0,0))
             pygame.display.flip()
 
@@ -125,34 +178,7 @@ class SnakeGame:
             clock.tick(self.fps)
             pygame.display.update()
 
-            # game state updates
-            next_head = (head[0]+direction[0],head[1]+direction[1])
-
-            # Enforce board boundaries
-            if not 0 <= next_head[0] < self.board_size or \
-               not 0 <= next_head[1] < self.board_size:
-                game_over = GameState.Loss
-                # TODO: Handle score
-                break
-
-            # Detect tail collision
-            if tiles[next_head] == Tile.Snake:
-                game_over = GameState.Loss
-                # TODO: Handle score
-                break
-
-            # Detect picking up food
-            if tiles[next_head] == Tile.Food:
-                got_food = True # skip popping from tail, results in "growing"
-                tiles[self.rand_point(tiles)] = Tile.Food
-                # TODO: Handle score
-
-            snake_queue.put(next_head)
-            tiles[next_head] = Tile.Snake
-            head = next_head
-            if not got_food:
-                tiles[snake_queue.get_nowait()] = Tile.Empty
-            got_food = False
+            self.time += 1
 
         pygame.quit()
 
