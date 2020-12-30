@@ -78,10 +78,12 @@ class QLearning(Agent):
         while self.history:
             state, a = self.history.pop(-1)
 
+            # Max of next_state
+            maxQ_next = max([v for v in self.Q[next_state] if v is not None])
+
             # Bellman Equation
-            self.Q[state][a] += self.alpha * (reward + self.gamma * \
-                                 max([v for v in self.Q[next_state]
-                                      if v is not None]) - self.Q[state][a])
+            self.Q[state][a] += self.alpha * \
+                (reward + self.gamma * maxQ_next - self.Q[state][a])
 
             # Set values for next iteration
             next_state = state
