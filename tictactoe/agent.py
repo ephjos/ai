@@ -2,10 +2,6 @@
 import random
 from common import Tile, Result
 
-################################################################################
-import sys
-################################################################################
-
 class Agent:
     def __init__(self):
         raise NotImplementedError('Cannot use abstract Agent')
