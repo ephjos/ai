@@ -32,7 +32,7 @@ class QLearning(Agent):
     def __init__(self):
         self.Q = {}
         self.alpha = 0.1
-        self.gamma = 0.4
+        self.gamma = 0.3
 
     def hash_state(self, board):
         return hash(tuple(board))
@@ -75,22 +75,22 @@ class QLearning(Agent):
         key = self.hash_state(s)
         reward = 0
         if res == Result.Tie:
-            reward = 0.5
+            reward = 5
         elif res == Result.X_Win:
             if self.tile == Tile.X:
-                reward = 1
+                reward = 10
             else:
-                reward = -1
+                reward = -10
         elif res == Result.O_Win:
             if self.tile == Tile.O:
-                reward = 1
+                reward = 10
             else:
-                reward = -1
+                reward = -10
 
         if key not in self.Q:
             self.Q[key] = [0 if t == Tile.Empty else -2**32
                            for i,t in enumerate(s)]
-        self.Q[key][self.last_action] = reward
+        self.Q[key][self.last_action] += reward
 
 if __name__ == "__main__":
     print()

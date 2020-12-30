@@ -51,10 +51,10 @@ class Battle:
         self.plot_run(*self.run(n), fn)
 
 if __name__ == "__main__":
-    agent_1, agent_2 = RandomChoice(), RandomChoice()
-    n = 50000
+    agent_1, agent_2 = RandomChoice(), QLearning()
+    n = 100000
     battle = Battle(agent_1, agent_2)
-    battle.run_and_plot(n, 'images/RandomChoice_v_RandomChoice.png')
-    #battle = Battle(agent_2, agent_1)
-    #battle.run_and_plot(n, 'images/QLearning_v_RandomChoice.png')
+    battle.run_and_plot(n)
+    battle = Battle(agent_2, agent_1)
+    battle.run_and_plot(n)
 
