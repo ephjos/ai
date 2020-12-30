@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 import random
-from common import Tile, Result
+from common import Tile, Result, show_board
 
 class Agent:
     def __init__(self):
         raise NotImplementedError('Cannot use abstract Agent')
 
-    def get_move(self, board, char):
+    def get_move(self, board):
         raise NotImplementedError('Cannot use abstract Agent')
 
     def game_over(self, board, res):
@@ -20,7 +20,7 @@ class RandomChoice(Agent):
     def __init__(self):
         return
 
-    def get_move(self, board, char):
+    def get_move(self, board):
         return random.choice(
             [i for i,t in enumerate(board) if t == Tile.Empty])
 
@@ -31,66 +31,62 @@ class QLearning(Agent):
     name = 'QLearning'
     def __init__(self):
         self.Q = {}
-        self.alpha = 0.1
+        self.alpha = 0.9
         self.gamma = 0.3
+        self.eps  = 0.05
+        self.history = []
 
     def hash_state(self, board):
-        return hash(tuple(board))
+        return hash(''.join(board))
 
-    def get_move(self, board, char):
+    def get_move(self, board):
+        # TODO: on train only
+        if random.random() < self.eps: # chance to make a random move
+            return random.choice(
+                [i for i,t in enumerate(board) if t == Tile.Empty])
+
         s_t = board.copy()
-        old = self.hash_state(s_t)
+        hash_s_t = self.hash_state(s_t)
 
         # Never seen, initialize table entry
-        if old not in self.Q:
-            self.Q[old] = [0 if t == Tile.Empty else -2**32
+        if hash_s_t not in self.Q:
+            self.Q[hash_s_t] = [0 if t == Tile.Empty else None
                            for i,t in enumerate(s_t)]
 
         # Pick action, randomly picking in case of tie
-        m = max(self.Q[old])
+        m = max([v for v in self.Q[hash_s_t] if v is not None])
         a_t = random.choice(
-            [i for i,a in enumerate(self.Q[old]) if a == m])
+            [i for i,a in enumerate(self.Q[hash_s_t]) if a == m])
 
-        # State if action is taken
-        s_tp1 = s_t.copy()
-        s_tp1[a_t] = char
-        new = self.hash_state(s_t)
+        self.history.append((hash_s_t, a_t))
 
-        # Never seen, initialize table entry
-        if new not in self.Q:
-            self.Q[new] = [0 if t == Tile.Empty else -2**32
-                           for i,t in enumerate(s_tp1)]
-
-        maxQ = max(self.Q[new])
-
-        self.Q[new][a_t] = self.Q[old][a_t] + self.alpha * \
-            (self.gamma * maxQ - self.Q[old][a_t])
-
-        self.last_action = a_t
         return a_t
 
     def game_over(self, board, res):
-        s = board.copy()
-        s[self.last_action] = Tile.Empty
-        key = self.hash_state(s)
-        reward = 0
-        if res == Result.Tie:
-            reward = 5
-        elif res == Result.X_Win:
-            if self.tile == Tile.X:
-                reward = 10
-            else:
-                reward = -10
-        elif res == Result.O_Win:
-            if self.tile == Tile.O:
-                reward = 10
-            else:
-                reward = -10
+        # Calculate reward based on result of game
+        reward = -1
+        if res == Result.Tie: reward = 0
+        elif res == Result.X_Win and self.tile == Tile.X: reward = 1
+        elif res == Result.O_Win and self.tile == Tile.O: reward = 1
 
-        if key not in self.Q:
-            self.Q[key] = [0 if t == Tile.Empty else -2**32
-                           for i,t in enumerate(s)]
-        self.Q[key][self.last_action] += reward
+        # Init next_state (state that happens when action is taken
+        next_state = self.hash_state(board)
+        if next_state not in self.Q:
+            self.Q[next_state] = [0]
+
+        # Go back over move history and update Q table
+        while self.history:
+            state, a = self.history.pop(-1)
+
+            # Bellman Equation
+            self.Q[state][a] += self.alpha * (reward + self.gamma * \
+                                 max([v for v in self.Q[next_state]
+                                      if v is not None]) - self.Q[state][a])
+
+            # Set values for next iteration
+            next_state = state
+            reward = self.Q[state][a]
+        self.history = []
 
 if __name__ == "__main__":
     print()

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from agent import Agent, RandomChoice
 import os
-from common import Result, Tile
+from common import Result, Tile, show_board
 import time
 
 class TicTacToeGame:
@@ -13,12 +13,6 @@ class TicTacToeGame:
         self.board = [Tile.Empty for _ in range(9)]
         self.player_1 = player_1
         self.player_2 = player_2
-
-    def show_board(self):
-        for i in range(3):
-            i *= 3
-            print(f'{self.board[i]} {self.board[i+1]} {self.board[i+2]}')
-        print()
 
     def is_win(self):
         r1 = self.board[0] != Tile.Empty and \
@@ -48,10 +42,10 @@ class TicTacToeGame:
             #self.show_board()
             if i % 2 == 0:
                 char = Tile.X
-                move = self.player_1.get_move(self.board, char)
+                move = self.player_1.get_move(self.board)
             else:
                 char = Tile.O
-                move = self.player_2.get_move(self.board, char)
+                move = self.player_2.get_move(self.board)
 
             if self.board[move] != Tile.Empty:
                 raise Exception('Trying to pick non-empty tile')

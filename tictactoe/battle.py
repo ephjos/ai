@@ -28,6 +28,9 @@ class Battle:
             ties.append(tie/i)
             xs.append(x/i)
             os.append(o/i)
+            temp = self.player_1
+            self.player_1 = self.player_2
+            self.player_2 = temp
         return n, ties, xs, os
 
     def plot_run(self, total, ties, xs, os, fn=None):
@@ -52,7 +55,7 @@ class Battle:
 
 if __name__ == "__main__":
     agent_1, agent_2 = RandomChoice(), QLearning()
-    n = 100000
+    n = 500000
     battle = Battle(agent_1, agent_2)
     battle.run_and_plot(n)
     battle = Battle(agent_2, agent_1)

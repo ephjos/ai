@@ -11,3 +11,9 @@ class Result(Enum):
     X_Win   = auto()
     O_Win   = auto()
 
+
+def show_board(board):
+    for i in range(3):
+        i *= 3
+        print(f'{board[i]} {board[i+1]} {board[i+2]}')
+    print()
